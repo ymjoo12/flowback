@@ -1,0 +1,44 @@
+export function FlowBackMark({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect width="64" height="64" rx="16" fill="#071F1B" />
+      <path
+        d="M20 18h25.5C50.2 18 54 21.8 54 26.5c0 3.5-2.1 6.7-5.3 7.9"
+        stroke="#5EEAD4"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M39.5 9.5 48 18l-8.5 8.5"
+        stroke="#5EEAD4"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M44 46H18.5C13.8 46 10 42.2 10 37.5c0-3.5 2.1-6.7 5.3-7.9"
+        stroke="#E9FFF9"
+        strokeOpacity="0.88"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M24.5 54.5 16 46l8.5-8.5"
+        stroke="#E9FFF9"
+        strokeOpacity="0.88"
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="32" cy="32" r="6.5" fill="#5EEAD4" />
+    </svg>
+  );
+}

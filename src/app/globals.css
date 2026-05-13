@@ -42,6 +42,26 @@ a {
   text-decoration: none;
 }
 
+:where(
+  a,
+  button,
+  [role="button"],
+  summary,
+  select,
+  label,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="checkbox"],
+  input[type="radio"]
+) {
+  cursor: pointer;
+}
+
+:where(button:disabled, select:disabled, input:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: var(--color-fg);
