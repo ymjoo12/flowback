@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 export function CreateOrderForm({ disabled }: { disabled?: boolean }) {
   const router = useRouter();
   const [amount, setAmount] = useState("10");
-  const [note, setNote] = useState("3-item order, K-beauty bundle");
+  const [note, setNote] = useState("K-뷰티 세트 주문");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

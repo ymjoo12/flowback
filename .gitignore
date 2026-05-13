@@ -52,7 +52,9 @@ Thumbs.db
 # Misc
 .cache/
 .omx/
+.playwright-cli/
 .playwright-mcp/
+tmp/
 doc-after-test.png
 *.log
 .vercel
