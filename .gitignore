@@ -51,5 +51,8 @@ Thumbs.db
 
 # Misc
 .cache/
+.omx/
+.playwright-mcp/
+doc-after-test.png
 *.log
 .vercel
