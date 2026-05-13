@@ -3,7 +3,7 @@ import { ArrowUpRight, TrendingUp, RefreshCcw, Gift, Receipt } from "lucide-reac
 import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { AccountLink } from "@/components/TxLink";
 import { CreateOrderForm } from "./CreateOrderForm";
 import { loadSellerWallet, getXrpBalance } from "@/lib/xrpl/wallets";
@@ -122,11 +122,10 @@ export default async function SellerDashboardPage() {
                           {o.created_at}
                         </td>
                         <td className="py-2 text-right">
-                          <Link
-                            href={`/seller/orders/${o.id}`}
-                            className={buttonVariants({ variant: "ghost", size: "sm" })}
-                          >
-                            처리 <ArrowUpRight className="h-3 w-3" />
+                          <Link href={`/seller/orders/${o.id}`}>
+                            <Button variant="ghost" size="sm">
+                              처리 <ArrowUpRight className="h-3 w-3" />
+                            </Button>
                           </Link>
                         </td>
                       </tr>

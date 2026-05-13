@@ -10,9 +10,8 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { FlowBackMark } from "@/components/FlowBackMark";
-import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   return (
@@ -31,24 +30,27 @@ export default function HomePage() {
           </div>
         </div>
         <nav className="flex items-center gap-1">
-          <Link href="/buyer/wallet" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            <Wallet className="h-3.5 w-3.5" />
-            Buyer
+          <Link href="/buyer/wallet">
+            <Button variant="ghost" size="sm">
+              <Wallet className="h-3.5 w-3.5" />
+              Buyer
+            </Button>
           </Link>
-          <Link
-            href="/seller/dashboard"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Seller
+          <Link href="/seller/dashboard">
+            <Button variant="ghost" size="sm">
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Seller
+            </Button>
           </Link>
           <a
             href="https://github.com/ymjoo12/flowback"
             target="_blank"
             rel="noreferrer"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden sm:inline-flex")}
+            className="hidden sm:block"
           >
-            GitHub
+            <Button variant="outline" size="sm">
+              GitHub
+            </Button>
           </a>
         </nav>
       </header>
@@ -68,14 +70,15 @@ export default function HomePage() {
           스테이블코인으로 연결해, 구매자와 셀러 모두에게 예측 가능한 정산 경험을 제공합니다.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-2">
-          <Link href="/buyer/wallet" className={buttonVariants({ size: "lg" })}>
-            구매자 월렛 <ArrowRight className="h-4 w-4" />
+          <Link href="/buyer/wallet">
+            <Button size="lg">
+              구매자 월렛 <ArrowRight className="h-4 w-4" />
+            </Button>
           </Link>
-          <Link
-            href="/seller/dashboard"
-            className={buttonVariants({ variant: "secondary", size: "lg" })}
-          >
-            셀러 대시보드 <ArrowRight className="h-4 w-4" />
+          <Link href="/seller/dashboard">
+            <Button variant="secondary" size="lg">
+              셀러 대시보드 <ArrowRight className="h-4 w-4" />
+            </Button>
           </Link>
         </div>
 
