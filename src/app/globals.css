@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0a0c;
+  --color-bg-elevated: #111114;
+  --color-bg-card: #15151a;
+  --color-border: #26262d;
+  --color-border-strong: #3a3a44;
+  --color-fg: #e9e9ee;
+  --color-fg-muted: #9a9aa6;
+  --color-fg-subtle: #6b6b76;
+  --color-accent: #5eead4;
+  --color-accent-strong: #2dd4bf;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  --color-brand: #8b5cf6;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  color: var(--color-fg);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-border) 70%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
