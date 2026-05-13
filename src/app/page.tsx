@@ -59,7 +59,7 @@ export default function HomePage() {
       <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pt-14 pb-12">
         <Badge tone="accent" className="mb-5">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--color-accent)]" />
-          KFIP 2026 · XRPL Track
+          XRPL settlement wallet
         </Badge>
         <h1 className="text-balance text-[42px] font-semibold leading-[1.05] tracking-tight md:text-[56px]">
           결제 이후의 가치 흐름을
@@ -68,12 +68,12 @@ export default function HomePage() {
         </h1>
         <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-[color:var(--color-fg-muted)]">
           글로벌 커머스 거래 이후 발생하는 부분 환불·반품·보상·재구매 혜택을 XRPL Escrow와 RLUSD
-          스테이블코인으로 묶어, 구매자와 셀러 모두에게 예측 가능한 정산 경험을 제공합니다.
+          스테이블코인으로 연결해, 구매자와 셀러 모두에게 예측 가능한 정산 경험을 제공합니다.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-2">
           <Link href="/buyer/wallet">
             <Button size="lg">
-              구매자 데모 시작 <ArrowRight className="h-4 w-4" />
+              구매자 월렛 <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
           <Link href="/seller/dashboard">
@@ -87,7 +87,7 @@ export default function HomePage() {
           <Metric label="환불 처리 시간" value="3~5초" hint="XRPL ledger close" />
           <Metric label="평균 수수료" value="< $0.0001" hint="per tx" />
           <Metric label="대상 셀러" value="K-커머스" hint="해외 직판 SMB" />
-          <Metric label="진행 단계" value="MVP 개발" hint="2026 Q2 PoC" />
+          <Metric label="검증 환경" value="Testnet" hint="Live XRPL tx" />
         </div>
       </section>
 
@@ -128,7 +128,7 @@ export default function HomePage() {
 
       <footer className="relative z-10 mx-auto w-full max-w-6xl border-t border-[color:var(--color-border)] px-6 py-6 text-xs text-[color:var(--color-fg-subtle)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span>© 2026 HYBLOCK · FlowBack · KFIP 2026 submission</span>
+          <span>© 2026 FlowBack</span>
           <span>XRPL Testnet · RLUSD issuer rQhWct2…iLKV</span>
         </div>
       </footer>

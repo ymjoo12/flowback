@@ -47,7 +47,10 @@ export default async function SellerDashboardPage() {
       .filter((s) => s.kind === "reward")
       .reduce((a, s) => a + Number(s.amount), 0);
   }
-  const conversionRate = orders.length === 0 ? 0 : Math.min(100, Math.round((totalRewarded / Math.max(totalEscrowed, 1)) * 100));
+  const conversionRate =
+    orders.length === 0
+      ? 0
+      : Math.min(100, Math.round((totalRewarded / Math.max(totalEscrowed, 1)) * 100));
 
   return (
     <>
@@ -57,7 +60,7 @@ export default async function SellerDashboardPage() {
 
         <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <Badge tone="accent">HYBLOCK · Seller View</Badge>
+            <Badge tone="accent">Seller View</Badge>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight">셀러 정산 대시보드</h1>
             <p className="mt-1 text-sm text-[color:var(--color-fg-muted)]">
               락업된 결제금·환불 예정·보상 지급을 한 화면에서 관리합니다.
@@ -78,7 +81,7 @@ export default async function SellerDashboardPage() {
           <Metric label="락업된 결제" value={`${formatAmount(totalEscrowed, 2)} XRP`} icon={TrendingUp} />
           <Metric label="누적 환불" value={`${formatAmount(totalRefunded, 2)} XRP`} icon={RefreshCcw} />
           <Metric label="누적 보상" value={`${formatAmount(totalRewarded, 2)} RLUSD`} icon={Gift} />
-          <Metric label="재구매 전환(데모)" value={`${conversionRate}%`} icon={Receipt} />
+          <Metric label="재구매 전환" value={`${conversionRate}%`} icon={Receipt} />
         </section>
 
         <section className="mt-8 grid gap-4 md:grid-cols-3">
@@ -90,7 +93,7 @@ export default async function SellerDashboardPage() {
             <CardContent>
               {orders.length === 0 ? (
                 <div className="rounded-md border border-dashed border-[color:var(--color-border)] px-4 py-8 text-center text-xs text-[color:var(--color-fg-subtle)]">
-                  아직 주문이 없습니다. 오른쪽 패널에서 데모 주문을 생성하세요.
+                  아직 주문이 없습니다. 오른쪽 패널에서 주문을 생성하세요.
                 </div>
               ) : (
                 <table className="w-full text-xs">
@@ -135,12 +138,12 @@ export default async function SellerDashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>데모 주문 생성</CardTitle>
+              <CardTitle>주문 생성</CardTitle>
             </CardHeader>
             <CardContent>
               <CreateOrderForm disabled={!sellerAddress} />
               <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--color-fg-muted)]">
-                BUYER 지갑이 입력 금액만큼 XRP를 EscrowCreate 트랜잭션으로 락업합니다. 트랜잭션은 즉시
+                구매자 지갑이 입력 금액만큼 XRP를 EscrowCreate 트랜잭션으로 락업합니다. 트랜잭션은 즉시
                 XRPL Testnet에 제출됩니다.
               </p>
             </CardContent>

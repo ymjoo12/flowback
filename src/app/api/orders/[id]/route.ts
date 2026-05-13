@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadOrderDetail } from "@/lib/orders";
+import { toErrorResponse } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,13 +11,13 @@ export async function GET(
 ) {
   const { id } = await ctx.params;
   const orderId = Number(id);
-  if (!Number.isFinite(orderId)) {
+  if (!Number.isInteger(orderId) || orderId <= 0) {
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
   try {
     return NextResponse.json(loadOrderDetail(orderId));
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const { message } = toErrorResponse(err);
     return NextResponse.json({ error: message }, { status: 404 });
   }
 }

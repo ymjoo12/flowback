@@ -15,16 +15,24 @@ export function SellerActions({
 }) {
   const router = useRouter();
   const [refundAmount, setRefundAmount] = useState("3");
-  const [refundNote, setRefundNote] = useState("Out of stock — 1 of 3 items refunded");
+  const [refundNote, setRefundNote] = useState("품절 상품 환불");
   const [rewardAmount, setRewardAmount] = useState("1");
-  const [rewardNote, setRewardNote] = useState("Late-shipping compensation");
+  const [rewardNote, setRewardNote] = useState("배송 지연 보상");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const total = Number(totalXrp);
   const refundNum = Number(refundAmount);
-  const keep = Math.max(0, total - refundNum);
-  const canRefund = status === "escrowed" && refundNum >= 0 && refundNum <= total;
+  const keep = formatAmountInput(Math.max(0, total - refundNum));
+  const canEditRefund = status === "escrowed" && busy === null;
+  const canRefund =
+    status === "escrowed" &&
+    busy === null &&
+    refundAmount.trim() !== "" &&
+    Number.isFinite(total) &&
+    Number.isFinite(refundNum) &&
+    refundNum >= 0 &&
+    refundNum <= total;
 
   async function partialRefund() {
     setBusy("refund");
@@ -33,7 +41,11 @@ export function SellerActions({
       const res = await fetch(`/api/orders/${orderId}/partial-refund`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ keepXrp: String(keep), refundXrp: String(refundNum), note: refundNote }),
+        body: JSON.stringify({
+          keepXrp: keep,
+          refundXrp: formatAmountInput(refundNum),
+          note: refundNote,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -66,13 +78,13 @@ export function SellerActions({
 
   return (
     <div className="space-y-5">
-      <Section title="부분 환불 (EscrowFinish + Payment refund)">
+      <Section title="부분 환불">
         <Field label="환불 금액 (XRP)">
           <input
             value={refundAmount}
             onChange={(e) => setRefundAmount(e.target.value)}
             inputMode="decimal"
-            disabled={!canRefund || busy !== null}
+            disabled={!canEditRefund}
             className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg-elevated)] px-2.5 py-1.5 text-sm tabular focus:border-[color:var(--color-accent)] focus:outline-none disabled:opacity-50"
           />
         </Field>
@@ -80,7 +92,7 @@ export function SellerActions({
           <input
             value={refundNote}
             onChange={(e) => setRefundNote(e.target.value)}
-            disabled={!canRefund || busy !== null}
+            disabled={!canEditRefund}
             className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg-elevated)] px-2.5 py-1.5 text-sm focus:border-[color:var(--color-accent)] focus:outline-none disabled:opacity-50"
           />
         </Field>
@@ -90,7 +102,7 @@ export function SellerActions({
         </div>
         <Button
           onClick={partialRefund}
-          disabled={!canRefund || busy !== null}
+          disabled={!canRefund}
           className="w-full"
         >
           {busy === "refund" ? "트랜잭션 제출 중…" : "부분 환불 실행"}
@@ -102,7 +114,7 @@ export function SellerActions({
         )}
       </Section>
 
-      <Section title="보상 지급 (RLUSD Payment)">
+      <Section title="보상 지급">
         <Field label="지급 RLUSD">
           <input
             value={rewardAmount}
@@ -148,6 +160,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </div>
   );
+}
+
+function formatAmountInput(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  return value.toFixed(6).replace(/\.?0+$/, "");
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

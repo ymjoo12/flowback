@@ -15,6 +15,7 @@ export function getDb(): Database.Database {
   _db = new Database(dbPath());
   _db.pragma("journal_mode = WAL");
   _db.exec(SCHEMA);
+  ensureColumn(_db, "orders", "escrow_finish_after", "INTEGER");
   return _db;
 }
 
@@ -27,6 +28,7 @@ export interface OrderRow {
   escrow_owner: string;
   escrow_sequence: number | null;
   escrow_tx_hash: string | null;
+  escrow_finish_after: number | null;
   created_at: string;
 }
 
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS orders (
   escrow_owner    TEXT    NOT NULL,
   escrow_sequence INTEGER,
   escrow_tx_hash  TEXT,
+  escrow_finish_after INTEGER,
   created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -83,8 +86,8 @@ export const queries = {
     getDb()
       .prepare(
         `INSERT INTO orders
-         (buyer_address, seller_address, total_xrp, status, escrow_owner, escrow_sequence, escrow_tx_hash)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (buyer_address, seller_address, total_xrp, status, escrow_owner, escrow_sequence, escrow_tx_hash, escrow_finish_after)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.buyer_address,
@@ -94,7 +97,17 @@ export const queries = {
         row.escrow_owner,
         row.escrow_sequence,
         row.escrow_tx_hash,
+        row.escrow_finish_after,
       ),
+  deleteOrder: (id: number) => getDb().prepare(`DELETE FROM orders WHERE id = ?`).run(id),
+  updateOrderEscrow: (id: number, sequence: number, txHash: string) =>
+    getDb()
+      .prepare(
+        `UPDATE orders
+         SET status = 'escrowed', escrow_sequence = ?, escrow_tx_hash = ?
+         WHERE id = ?`,
+      )
+      .run(sequence, txHash, id),
   updateOrderStatus: (id: number, status: OrderStatus) =>
     getDb().prepare(`UPDATE orders SET status = ? WHERE id = ?`).run(status, id),
   getOrder: (id: number) =>
@@ -121,3 +134,15 @@ export const queries = {
       .prepare(`SELECT * FROM settlements WHERE order_id = ? ORDER BY id ASC`)
       .all(orderId) as SettlementRow[],
 };
+
+function ensureColumn(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}

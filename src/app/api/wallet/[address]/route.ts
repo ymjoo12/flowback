@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getXrpBalance } from "@/lib/xrpl/wallets";
 import { getRlusdBalance } from "@/lib/xrpl/token";
+import { toErrorResponse } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export async function GET(
     const [xrp, rlusd] = await Promise.all([getXrpBalance(address), getRlusdBalance(address)]);
     return NextResponse.json({ address, xrp, rlusd });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const { message, status } = toErrorResponse(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

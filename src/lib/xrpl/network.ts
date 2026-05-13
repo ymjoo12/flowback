@@ -21,5 +21,13 @@ export const RLUSD_ISSUER: Record<"testnet" | "mainnet", string> = {
   mainnet: "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
 };
 
-// RLUSD currency: 40-char hex of "RLUSD" — XRPL uses this for non-3-letter codes.
 export const RLUSD_CURRENCY_HEX = "524C555344000000000000000000000000000000";
+
+export function resolveRlusdIssuer(): string {
+  const network = resolveNetwork();
+  const configured =
+    process.env[`RLUSD_ISSUER_${network.toUpperCase()}`] ?? process.env.RLUSD_ISSUER;
+  if (configured) return configured;
+  if (network === "testnet" && process.env.SELLER_ADDRESS) return process.env.SELLER_ADDRESS;
+  return network === "mainnet" ? RLUSD_ISSUER.mainnet : RLUSD_ISSUER.testnet;
+}

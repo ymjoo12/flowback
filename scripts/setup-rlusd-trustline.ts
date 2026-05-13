@@ -1,4 +1,3 @@
-// Open RLUSD Trust Lines for both demo wallets. Requires SELLER_SEED/BUYER_SEED in .env.
 import "dotenv/config";
 import type { Wallet } from "xrpl";
 import { loadBuyerWallet, loadSellerWallet, getXrpBalance } from "../src/lib/xrpl/wallets";

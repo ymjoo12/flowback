@@ -1,9 +1,20 @@
 import { loadBuyerWallet, loadSellerWallet } from "./xrpl/wallets";
 import { createEscrow, finishEscrow } from "./xrpl/escrow";
-import { sendRlusd } from "./xrpl/token";
+import { ensureRlusdTrustline, getRlusdBalance, sendRlusd } from "./xrpl/token";
 import { Client, xrpToDrops } from "xrpl";
 import { resolveEndpoint } from "./xrpl/network";
 import { queries, type OrderRow, type SettlementRow } from "./db";
+import {
+  assertBalancedRefund,
+  parseNonNegativeAmount,
+  parsePositiveAmount,
+} from "./amounts";
+import { AppError } from "./errors";
+
+export const ESCROW_FINISH_DELAY_SECONDS = 10;
+const ESCROW_FINISH_BUFFER_MS = 3000;
+const MAX_ORDER_XRP = 100;
+const MAX_REWARD_RLUSD = 100;
 
 export interface CreateOrderInput {
   totalXrp: string;
@@ -21,33 +32,43 @@ export interface OrderDetail {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<OrderDetail> {
+  const total = parsePositiveAmount(input.totalXrp, "totalXrp", MAX_ORDER_XRP);
   const seller = loadSellerWallet();
   const buyer = loadBuyerWallet();
 
   const now = Math.floor(Date.now() / 1000);
-  // FinishAfter must be future at submission, else ledger returns tecNO_PERMISSION.
-  const result = await createEscrow({
-    sender: buyer,
-    destination: seller.classicAddress,
-    amountXrp: input.totalXrp,
-    finishAfterUnix: now + 3,
-    cancelAfterUnix: now + 60 * 60,
-  });
-
+  const finishAfter = now + ESCROW_FINISH_DELAY_SECONDS;
   const insert = queries.insertOrder({
     buyer_address: buyer.classicAddress,
     seller_address: seller.classicAddress,
-    total_xrp: input.totalXrp,
+    total_xrp: total.text,
     status: "escrowed",
     escrow_owner: buyer.classicAddress,
-    escrow_sequence: result.offerSequence,
-    escrow_tx_hash: result.txHash,
+    escrow_sequence: null,
+    escrow_tx_hash: null,
+    escrow_finish_after: finishAfter,
   });
   const orderId = Number(insert.lastInsertRowid);
+
+  let result;
+  try {
+    result = await createEscrow({
+      sender: buyer,
+      destination: seller.classicAddress,
+      amountXrp: total.text,
+      destinationTag: orderId,
+      finishAfterUnix: finishAfter,
+      cancelAfterUnix: now + 60 * 60,
+    });
+  } catch (err) {
+    queries.deleteOrder(orderId);
+    throw err;
+  }
+  queries.updateOrderEscrow(orderId, result.offerSequence, result.txHash);
   queries.insertSettlement({
     order_id: orderId,
     kind: "escrow_create",
-    amount: input.totalXrp,
+    amount: total.text,
     currency: "XRP",
     tx_hash: result.txHash,
     note: input.note ?? null,
@@ -62,51 +83,59 @@ export interface PartialRefundInput {
   note?: string;
 }
 
-// XRPL Escrow cannot be partially finished; we EscrowFinish in full then
-// immediately Payment the unused portion back to the buyer.
 export async function executePartialRefund(input: PartialRefundInput): Promise<OrderDetail> {
   const order = queries.getOrder(input.orderId);
-  if (!order) throw new Error(`order ${input.orderId} not found`);
-  if (order.status !== "escrowed") {
-    throw new Error(`order ${input.orderId} is in '${order.status}', cannot refund`);
+  if (!order) throw new AppError(`order ${input.orderId} not found`, 404);
+  const settlements = queries.listSettlements(order.id);
+  const hasEscrowFinish = settlements.some((s) => s.kind === "escrow_finish");
+  const hasRefund = settlements.some((s) => s.kind === "refund");
+  if (hasRefund) throw new AppError(`order ${input.orderId} already has a refund`, 409);
+  if (order.status !== "escrowed" && !hasEscrowFinish) {
+    throw new AppError(`order ${input.orderId} is in '${order.status}', cannot refund`, 409);
   }
   if (typeof order.escrow_sequence !== "number") {
-    throw new Error(`order ${input.orderId} has no escrow_sequence`);
+    throw new AppError(`order ${input.orderId} has no escrow_sequence`, 409);
   }
 
-  const seller = loadSellerWallet();
-  // Wait past FinishAfter (createOrder set it to now+3s).
-  await sleep(4500);
-  const finishHash = await finishEscrow({
-    signer: seller,
-    owner: order.escrow_owner,
-    offerSequence: order.escrow_sequence,
-  });
-  queries.insertSettlement({
-    order_id: order.id,
-    kind: "escrow_finish",
-    amount: order.total_xrp,
-    currency: "XRP",
-    tx_hash: finishHash,
-    note: null,
-  });
+  const total = parsePositiveAmount(order.total_xrp, "totalXrp", MAX_ORDER_XRP);
+  const keep = parseNonNegativeAmount(input.keepXrp, "keepXrp", total.value);
+  const refund = parseNonNegativeAmount(input.refundXrp, "refundXrp", total.value);
+  assertBalancedRefund(total.value, keep.value, refund.value);
 
-  if (Number(input.refundXrp) > 0) {
+  const seller = loadSellerWallet();
+  if (!hasEscrowFinish) {
+    await waitUntilFinishable(order.escrow_finish_after);
+    const finishHash = await finishEscrow({
+      signer: seller,
+      owner: order.escrow_owner,
+      offerSequence: order.escrow_sequence,
+    });
+    queries.insertSettlement({
+      order_id: order.id,
+      kind: "escrow_finish",
+      amount: order.total_xrp,
+      currency: "XRP",
+      tx_hash: finishHash,
+      note: null,
+    });
+  }
+
+  if (refund.value > 0) {
     const refundHash = await sendXrpPayment({
       from: seller,
       to: order.buyer_address,
-      amountXrp: input.refundXrp,
+      amountXrp: refund.text,
       destinationTag: order.id,
     });
     queries.insertSettlement({
       order_id: order.id,
       kind: "refund",
-      amount: input.refundXrp,
+      amount: refund.text,
       currency: "XRP",
       tx_hash: refundHash,
-      note: input.note ?? "Partial refund (post-finish)",
+      note: input.note ?? null,
     });
-    queries.updateOrderStatus(order.id, "partially_refunded");
+    queries.updateOrderStatus(order.id, keep.value === 0 ? "fully_refunded" : "partially_refunded");
   } else {
     queries.updateOrderStatus(order.id, "completed");
   }
@@ -121,22 +150,30 @@ export interface RewardInput {
 
 export async function payReward(input: RewardInput): Promise<OrderDetail> {
   const order = queries.getOrder(input.orderId);
-  if (!order) throw new Error(`order ${input.orderId} not found`);
+  if (!order) throw new AppError(`order ${input.orderId} not found`, 404);
+  const amount = parsePositiveAmount(input.amountRlusd, "amountRlusd", MAX_REWARD_RLUSD);
 
   const seller = loadSellerWallet();
+  const buyer = loadBuyerWallet();
+  if (buyer.classicAddress === order.buyer_address) {
+    const trustline = await getRlusdBalance(order.buyer_address);
+    if (!trustline.hasTrustline) {
+      await ensureRlusdTrustline({ account: buyer });
+    }
+  }
   const hash = await sendRlusd({
     sender: seller,
     destination: order.buyer_address,
-    amount: input.amountRlusd,
+    amount: amount.text,
     destinationTag: order.id,
   });
   queries.insertSettlement({
     order_id: order.id,
     kind: "reward",
-    amount: input.amountRlusd,
+    amount: amount.text,
     currency: "RLUSD",
     tx_hash: hash,
-    note: input.note ?? "Loyalty reward",
+    note: input.note ?? null,
   });
   return loadOrderDetail(order.id);
 }
@@ -173,6 +210,12 @@ interface XrpPaymentInput {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitUntilFinishable(finishAfter: number | null): Promise<void> {
+  if (!finishAfter) return;
+  const waitMs = finishAfter * 1000 - Date.now() + ESCROW_FINISH_BUFFER_MS;
+  if (waitMs > 0) await sleep(waitMs);
 }
 
 async function sendXrpPayment(input: XrpPaymentInput): Promise<string> {

@@ -2,12 +2,12 @@ import { Wallet, dropsToXrp } from "xrpl";
 import type { AccountInfoResponse } from "xrpl";
 import { withClient } from "./client";
 
-export interface DemoWalletEnv {
+export interface WalletEnv {
   sellerSeed?: string;
   buyerSeed?: string;
 }
 
-function readSeeds(env: NodeJS.ProcessEnv = process.env): DemoWalletEnv {
+function readSeeds(env: NodeJS.ProcessEnv = process.env): WalletEnv {
   return {
     sellerSeed: env.SELLER_SEED,
     buyerSeed: env.BUYER_SEED,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createOrder } from "@/lib/orders";
 import { queries } from "@/lib/db";
+import { toErrorResponse } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { totalXrp?: string; note?: string };
+  const raw = await req.json().catch(() => ({}));
+  const body = (raw && typeof raw === "object" ? raw : {}) as {
+    totalXrp?: string;
+    note?: string;
+  };
   if (!body.totalXrp) {
     return NextResponse.json({ error: "totalXrp is required" }, { status: 400 });
   }
@@ -18,7 +23,7 @@ export async function POST(req: Request) {
     const detail = await createOrder({ totalXrp: body.totalXrp, note: body.note });
     return NextResponse.json(detail, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const { message, status } = toErrorResponse(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

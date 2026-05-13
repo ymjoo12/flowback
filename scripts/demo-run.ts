@@ -1,102 +1,55 @@
-// End-to-end demo. Amounts are tiny on purpose: each fresh testnet wallet only
-// receives ~100 XRP, and Escrow + TrustSet owner reserves eat ~1.4 XRP, so the
-// demo locks just enough to leave headroom.
 import "dotenv/config";
-import { Client, xrpToDrops } from "xrpl";
-import { loadBuyerWallet, loadSellerWallet, getXrpBalance } from "../src/lib/xrpl/wallets";
-import { createEscrow, finishEscrow } from "../src/lib/xrpl/escrow";
-import { sendRlusd, getRlusdBalance } from "../src/lib/xrpl/token";
-import { resolveEndpoint } from "../src/lib/xrpl/network";
+import { createOrder, executePartialRefund, payReward, type OrderDetail } from "../src/lib/orders";
+import { getRlusdBalance } from "../src/lib/xrpl/token";
+import { getXrpBalance, loadBuyerWallet, loadSellerWallet } from "../src/lib/xrpl/wallets";
 import { explorerTxUrl } from "../src/lib/utils";
 
-const ORDER_ID = 1001;
+const ORDER_XRP = "2";
+const KEEP_XRP = "1.25";
+const REFUND_XRP = "0.75";
+const REWARD_RLUSD = "0.25";
 
-async function refundPayment(args: {
-  signer: ReturnType<typeof loadSellerWallet>;
-  to: string;
-  amountXrp: string;
-  destinationTag: number;
-}): Promise<string> {
-  const client = new Client(resolveEndpoint());
-  await client.connect();
-  try {
-    const prepared = await client.autofill({
-      TransactionType: "Payment",
-      Account: args.signer.classicAddress,
-      Destination: args.to,
-      Amount: xrpToDrops(args.amountXrp),
-      DestinationTag: args.destinationTag,
-    });
-    const signed = args.signer.sign(prepared);
-    const res = await client.submitAndWait(signed.tx_blob);
-    const meta = res.result.meta;
-    const code =
-      typeof meta === "object" && meta !== null && "TransactionResult" in meta
-        ? (meta as { TransactionResult: string }).TransactionResult
-        : "unknown";
-    if (code !== "tesSUCCESS") throw new Error(`refund failed: ${code}`);
-    return signed.hash;
-  } finally {
-    await client.disconnect();
-  }
+function tx(detail: OrderDetail, kind: string): string {
+  const settlement = detail.settlements.find((item) => item.kind === kind);
+  if (!settlement) throw new Error(`missing ${kind} settlement`);
+  return explorerTxUrl(settlement.tx_hash);
 }
 
 async function main() {
   const seller = loadSellerWallet();
   const buyer = loadBuyerWallet();
 
-  console.log("FlowBack ‖ end-to-end demo");
+  console.log("FlowBack end-to-end validation");
   console.log(`  seller ${seller.classicAddress}`);
   console.log(`  buyer  ${buyer.classicAddress}\n`);
 
-  const now = Math.floor(Date.now() / 1000);
-  console.log("1) BUYER → EscrowCreate (10 XRP, DestinationTag=orderId)");
-  const escrow = await createEscrow({
-    sender: buyer,
-    destination: seller.classicAddress,
-    amountXrp: "10",
-    destinationTag: ORDER_ID,
-    finishAfterUnix: now + 3,
-    cancelAfterUnix: now + 60 * 60,
+  console.log(`1) Create order and lock ${ORDER_XRP} XRP in Escrow`);
+  const created = await createOrder({
+    totalXrp: ORDER_XRP,
+    note: "Order settlement validation",
   });
-  console.log(`   sequence ${escrow.offerSequence}`);
-  console.log(`   tx ${explorerTxUrl(escrow.txHash)}\n`);
+  console.log(`   order #${created.order.id}`);
+  console.log(`   tx ${tx(created, "escrow_create")}\n`);
 
-  await new Promise((r) => setTimeout(r, 4500));
-
-  console.log("2) SELLER → EscrowFinish (releases 10 XRP to seller)");
-  const finishHash = await finishEscrow({
-    signer: seller,
-    owner: buyer.classicAddress,
-    offerSequence: escrow.offerSequence,
+  console.log(`2) Finish Escrow and refund ${REFUND_XRP} XRP`);
+  const refunded = await executePartialRefund({
+    orderId: created.order.id,
+    keepXrp: KEEP_XRP,
+    refundXrp: REFUND_XRP,
+    note: "Partial refund",
   });
-  console.log(`   tx ${explorerTxUrl(finishHash)}\n`);
+  console.log(`   finish ${tx(refunded, "escrow_finish")}`);
+  console.log(`   refund ${tx(refunded, "refund")}\n`);
 
-  console.log("3) SELLER → Payment refund 3 XRP back to buyer (partial refund)");
-  const refundHash = await refundPayment({
-    signer: seller,
-    to: buyer.classicAddress,
-    amountXrp: "3",
-    destinationTag: ORDER_ID,
+  console.log(`3) Pay ${REWARD_RLUSD} RLUSD reward`);
+  const rewarded = await payReward({
+    orderId: created.order.id,
+    amountRlusd: REWARD_RLUSD,
+    note: "Post-purchase credit",
   });
-  console.log(`   tx ${explorerTxUrl(refundHash)}\n`);
+  console.log(`   reward ${tx(rewarded, "reward")}\n`);
 
-  console.log("4) SELLER → RLUSD reward 1 to buyer");
-  try {
-    const rewardHash = await sendRlusd({
-      sender: seller,
-      destination: buyer.classicAddress,
-      amount: "1",
-      destinationTag: ORDER_ID,
-    });
-    console.log(`   tx ${explorerTxUrl(rewardHash)}\n`);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.log(`   skipped (${msg})`);
-    console.log(`   tip: receive RLUSD test tokens at https://tryrlusd.com → ${seller.classicAddress}\n`);
-  }
-
-  console.log("Final balances:");
+  console.log("Final balances");
   console.log(`  seller XRP   = ${await getXrpBalance(seller.classicAddress)}`);
   console.log(`  buyer  XRP   = ${await getXrpBalance(buyer.classicAddress)}`);
   console.log(`  seller RLUSD = ${(await getRlusdBalance(seller.classicAddress)).balance}`);

@@ -1,12 +1,7 @@
 import { Wallet } from "xrpl";
 import type { Payment, TrustSet, TxResponse, AccountLinesResponse } from "xrpl";
 import { withClient } from "./client";
-import { RLUSD_CURRENCY_HEX, RLUSD_ISSUER, resolveNetwork } from "./network";
-
-function rlusdIssuer(): string {
-  const net = resolveNetwork();
-  return net === "mainnet" ? RLUSD_ISSUER.mainnet : RLUSD_ISSUER.testnet;
-}
+import { RLUSD_CURRENCY_HEX, resolveRlusdIssuer } from "./network";
 
 export interface TrustlineInput {
   account: Wallet;
@@ -14,13 +9,15 @@ export interface TrustlineInput {
 }
 
 export async function ensureRlusdTrustline(input: TrustlineInput): Promise<string> {
+  const issuer = resolveRlusdIssuer();
+  if (input.account.classicAddress === issuer) return "issuer";
   return withClient(async (client) => {
     const tx: TrustSet = {
       TransactionType: "TrustSet",
       Account: input.account.classicAddress,
       LimitAmount: {
         currency: RLUSD_CURRENCY_HEX,
-        issuer: rlusdIssuer(),
+        issuer,
         value: input.limit ?? "1000000000",
       },
     };
@@ -40,6 +37,7 @@ export interface RlusdPaymentInput {
 }
 
 export async function sendRlusd(input: RlusdPaymentInput): Promise<string> {
+  const issuer = resolveRlusdIssuer();
   return withClient(async (client) => {
     const tx: Payment = {
       TransactionType: "Payment",
@@ -47,7 +45,7 @@ export async function sendRlusd(input: RlusdPaymentInput): Promise<string> {
       Destination: input.destination,
       Amount: {
         currency: RLUSD_CURRENCY_HEX,
-        issuer: rlusdIssuer(),
+        issuer,
         value: input.amount,
       },
     };
@@ -64,11 +62,28 @@ export interface RlusdBalance {
   balance: string;
   limit: string;
   hasTrustline: boolean;
+  isIssuer: boolean;
 }
 
 export async function getRlusdBalance(address: string): Promise<RlusdBalance> {
   return withClient(async (client) => {
-    const issuer = rlusdIssuer();
+    const issuer = resolveRlusdIssuer();
+    if (address === issuer) {
+      const lines = (await client.request({
+        command: "account_lines",
+        account: address,
+        ledger_index: "validated",
+      })) as AccountLinesResponse;
+      const issued = lines.result.lines
+        .filter((l) => l.currency === RLUSD_CURRENCY_HEX)
+        .reduce((sum, line) => sum + Math.max(0, -Number(line.balance)), 0);
+      return {
+        balance: issued.toString(),
+        limit: "issuer",
+        hasTrustline: true,
+        isIssuer: true,
+      };
+    }
     const lines = (await client.request({
       command: "account_lines",
       account: address,
@@ -78,8 +93,8 @@ export async function getRlusdBalance(address: string): Promise<RlusdBalance> {
     const line = lines.result.lines.find(
       (l) => l.currency === RLUSD_CURRENCY_HEX && l.account === issuer,
     );
-    if (!line) return { balance: "0", limit: "0", hasTrustline: false };
-    return { balance: line.balance, limit: line.limit, hasTrustline: true };
+    if (!line) return { balance: "0", limit: "0", hasTrustline: false, isIssuer: false };
+    return { balance: line.balance, limit: line.limit, hasTrustline: true, isIssuer: false };
   });
 }
 

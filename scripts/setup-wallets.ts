@@ -1,5 +1,3 @@
-// Generate and fund seller + buyer testnet wallets via altnet faucet.
-// Output SEEDs go into .env (gitignored).
 import "dotenv/config";
 import { fundFromFaucet } from "../src/lib/xrpl/wallets";
 import { explorerAccountUrl } from "../src/lib/utils";

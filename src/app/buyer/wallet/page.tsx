@@ -36,11 +36,17 @@ export default async function BuyerWalletPage() {
   const orders = buyerAddress ? queries.listOrdersByBuyer(buyerAddress) : [];
   const totalRefund = orders.reduce((sum, o) => {
     const settlements = queries.listSettlements(o.id);
-    return sum + settlements.filter((s) => s.kind === "refund").reduce((a, s) => a + Number(s.amount), 0);
+    return (
+      sum +
+      settlements.filter((s) => s.kind === "refund").reduce((a, s) => a + Number(s.amount), 0)
+    );
   }, 0);
   const totalReward = orders.reduce((sum, o) => {
     const settlements = queries.listSettlements(o.id);
-    return sum + settlements.filter((s) => s.kind === "reward").reduce((a, s) => a + Number(s.amount), 0);
+    return (
+      sum +
+      settlements.filter((s) => s.kind === "reward").reduce((a, s) => a + Number(s.amount), 0)
+    );
   }, 0);
 
   return (
@@ -97,7 +103,7 @@ export default async function BuyerWalletPage() {
             <Card>
               <CardContent>
                 <p className="text-sm text-[color:var(--color-fg-muted)]">
-                  주문이 없습니다. 셀러 대시보드에서 데모 주문을 생성하세요.
+                  주문이 없습니다. 셀러 대시보드에서 주문을 생성하세요.
                 </p>
                 <Link
                   href="/seller/dashboard"
@@ -166,7 +172,7 @@ function BalanceCard({
 function EnvErrorBanner({ message }: { message: string }) {
   return (
     <div className="mb-6 rounded-md border border-[color:var(--color-warn)]/40 bg-[color:var(--color-warn)]/10 px-4 py-3 text-sm text-[color:var(--color-warn)]">
-      <div className="font-semibold">데모 지갑이 설정되지 않았습니다.</div>
+      <div className="font-semibold">지갑이 설정되지 않았습니다.</div>
       <p className="mt-1 text-xs">
         `pnpm setup:wallets`를 실행하고 출력된 SEED를 `.env`에 복사한 뒤 다시 로드하세요. ({message})
       </p>
