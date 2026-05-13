@@ -2,11 +2,14 @@
 
 > **Post-purchase Settlement Wallet on XRPL** — 글로벌 커머스 거래 이후 발생하는 환불·보상·리워드·재구매 혜택을 하나의 스테이블코인 월렛으로 연결합니다.
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-flowback--theta.vercel.app-2dd4bf)](https://flowback-theta.vercel.app)
 [![XRPL Testnet](https://img.shields.io/badge/XRPL-Testnet-5eead4)](https://testnet.xrpl.org/)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-000)](https://nextjs.org/)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000)](https://nextjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 > **HYBLOCK** 팀이 Korea Financial Innovation Program 2026 (KFIP 2026) 1차 제출을 위해 개발한 1차 프로덕트입니다.
+>
+> **Live Demo**: <https://flowback-theta.vercel.app>
 
 ---
 
